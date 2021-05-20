@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.28.29915.0	    05/20/21 22:16:12
+Microsoft (R) Macro Assembler Version 14.28.29915.0	    05/21/21 00:39:11
 Source.asm						     Page 1 - 1
 
 
@@ -29,38 +29,76 @@ Source.asm						     Page 1 - 1
  00000016 00000000		consoleRowSize DWORD ?
  0000001A 00000000		consoleColumnSize DWORD ?
 
- 0000001E 2D 00			starSign BYTE "-", 0
+ 0000001E  00002710 [		output BYTE 10000 DUP(?), 0
+	    00
+	   ] 00
 
  00000000			.code
  00000000			main PROC
 
-				; 取得 Console 視窗長寬
+				; -----------------------------------------------------------------------------
+				; 取得 Console 顯示視窗長寬
+				; 呼叫 GetConsoleScreenBufferInfo() 取得 consoleInfo
+				; consoleRowSize = consoleInfo.srWindow.Bottom - consoleInfo.srWindow.Top
+				; consoleColumnSize = consoleInfo.srWindow.Right - consoleInfo.srWindow.Left
+
 				invoke GetStdHandle, STD_OUTPUT_HANDLE
 				invoke GetConsoleScreenBufferInfo, eax, addr consoleInfo
 
- 00000012  0F B7 05		movzx eax, consoleInfo.srWindow.Right
-	   0000000E R
- 00000019  0F B7 1D		movzx ebx, consoleInfo.srWindow.Left
-	   0000000A R
- 00000020  2B C3		sub eax, ebx
- 00000022  A3 0000001A R	mov consoleColumnSize, eax
-
- 00000027  E8 00000000 E	call WriteInt
-
- 0000002C  0F B7 05		movzx eax, consoleInfo.srWindow.Bottom
+ 00000012  0F B7 05		movzx eax, consoleInfo.srWindow.Bottom
 	   00000010 R
- 00000033  0F B7 1D		movzx ebx, consoleInfo.srWindow.Top
+ 00000019  0F B7 1D		movzx ebx, consoleInfo.srWindow.Top
 	   0000000C R
- 0000003A  2B C3		sub eax, ebx
- 0000003C  A3 00000016 R	mov consoleRowSize, eax
+ 00000020  2B C3		sub eax, ebx
+ 00000022  40			inc eax
+ 00000023  A3 00000016 R	mov consoleRowSize, eax
 
- 00000041  E8 00000000 E	call WriteInt
+ 00000028  0F B7 05		movzx eax, consoleInfo.srWindow.Right
+	   0000000E R
+ 0000002F  0F B7 1D		movzx ebx, consoleInfo.srWindow.Left
+	   0000000A R
+ 00000036  2B C3		sub eax, ebx
+ 00000038  A3 0000001A R	mov consoleColumnSize, eax
+
+				; Test Output
+ 0000003D  B2 2A		mov dl, 42
+ 0000003F  BE 00000000		mov esi, 0
+ 00000044  8B 0D 00000016 R	mov ecx, consoleRowSize
+ 0000004A			L1 :
+ 0000004A  51				push ecx
+ 0000004B  8B 0D 0000001A R		mov ecx, consoleColumnSize
+ 00000051				L2 :
+ 00000051  88 96 0000001E R			mov output[esi], dl
+ 00000057  46					inc esi
+ 00000058  E2 F7			loop L2
+ 0000005A  C6 86 0000001E R		mov output[esi], 10
+	   0A
+ 00000061  59				pop ecx
+ 00000062  46				inc esi
+ 00000063  E2 E5		loop L1
+
+ 00000065  BA 0000001E R	mov edx, OFFSET output
+ 0000006A  E8 00000000 E	call WriteString
+ 0000006F  E8 00000000 E	call Crlf
+
+				;push esi
+				;push ecx
+				;mov esi, OFFSET output
+				;mov ebx, TYPE output
+				;mov ecx, LENGTHOF output
+				;call DumpMem
+				;pop ecx
+				;pop esi
+
+
+				; -----------------------------------------------------------------------------
+
 
 				exit
- 0000004D			main ENDP
+ 0000007B			main ENDP
 
 				END main
-Microsoft (R) Macro Assembler Version 14.28.29915.0	    05/20/21 22:16:12
+Microsoft (R) Macro Assembler Version 14.28.29915.0	    05/21/21 00:39:11
 Source.asm						     Symbols 2 - 1
 
 
@@ -154,8 +192,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 00000020 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 0000004D Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 0000272F Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000007B Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -262,7 +300,9 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000004D Public STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000007B Public STDCALL
+  L1 . . . . . . . . . . . . . .	L Near	 0000004A _TEXT	
+  L2 . . . . . . . . . . . . . .	L Near	 00000051 _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -498,8 +538,8 @@ lightGreen . . . . . . . . . . .	Number	 0000000Ah
 lightMagenta . . . . . . . . . .	Number	 0000000Dh   
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
+output . . . . . . . . . . . . .	Byte	 0000001E _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-starSign . . . . . . . . . . . .	Byte	 0000001E _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   
