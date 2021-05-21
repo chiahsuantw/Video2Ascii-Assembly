@@ -12,6 +12,11 @@ fileHandle HANDLE ?
 fileType BYTE 2 DUP(?), 0
 fileSize DWORD ?
 dataOffset WORD ?
+imageWidth DWORD ?
+imageHeight DWORD ?
+imageSize DWORD ?
+buffer DWORD ?
+; TODO: 動態配置，定義上限值
 byteArray BYTE 10000 DUP(?), 0
 
 ; 字串常數
@@ -110,18 +115,86 @@ mov ecx, 4
 mov edx, OFFSET fileSize
 call ReadFromFile
 
-; 增加 4 Byte 偏移量
+; 增加 4 Bytes 偏移量
 INVOKE SetFilePointer,
     fileHandle,
     4,
     0,
     FILE_CURRENT
 
-; 讀取資料位元組偏移量
+; 讀取資料偏移位元組數
 mov eax, fileHandle
 mov ecx, 1
 mov edx, OFFSET dataOffset
 call ReadFromFile
+
+; 增加 7 Bytes 偏移量
+INVOKE SetFilePointer,
+    fileHandle,
+    7, 
+    0,
+    FILE_CURRENT
+
+; 讀取圖片寬度
+mov eax, fileHandle
+mov ecx, 4
+mov edx, OFFSET imageWidth
+call ReadFromFile
+
+; 讀取圖片高度
+mov eax, fileHandle
+mov ecx, 4
+mov edx, OFFSET imageHeight
+call ReadFromFile
+
+; 計算圖片像素數量
+; imageSize = imageWidth * imageHeight
+; TODO: 注意乘法範圍
+mov eax, imageWidth
+mov ebx, imageHeight
+mul ebx
+mov imageSize, eax
+
+; 增加 {dataOffset} Bytes 偏移量
+INVOKE SetFilePointer,
+    fileHandle,
+    dataOffset, 
+    0,
+    FILE_BEGIN
+
+; 讀取色彩資料
+; EDI 用來暫時儲存連續讀到的 3 個值的合
+mov edi, 0
+mov esi, 0
+mov ecx, imageSize
+lp_read_bytes:
+    push ecx
+    mov ecx, 3
+    lp_read_rgb:
+        push ecx
+        ; 讀取 RGB 三色值
+        mov eax, fileHandle
+        mov ecx, 1
+        mov edx, OFFSET buffer
+        call ReadFromFile
+        ; 加總三色值，待之後灰階化
+        add edi, buffer
+        pop ecx
+    loop lp_read_rgb
+    ; 進行灰階化並儲存到 byteArray
+    mov edx, 0
+    mov eax, edi
+    mov ecx, 3
+    div ecx
+    mov [byteArray + esi], al
+    inc esi
+    pop ecx
+loop lp_read_bytes
+
+mov esi, OFFSET byteArray
+mov ebx, TYPE byteArray
+mov ecx, LENGTHOF byteArray
+call DumpMem
 
 ; 關閉檔案
 mov eax, fileHandle
