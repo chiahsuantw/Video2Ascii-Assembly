@@ -163,17 +163,17 @@ INVOKE SetFilePointer,
     FILE_BEGIN
 
 ; 讀取色彩資料
-; EDI 用來暫時儲存連續讀到的 3 個值的合
-mov edi, 0
 mov esi, 0
 mov ecx, imageSize
 lp_read_bytes:
+    ; EDI 用來暫時儲存 RGB 3 個值的合
+    mov edi, 0
     push ecx
     mov ecx, 3
     lp_read_rgb:
         push ecx
         ; 讀取 RGB 三色值
-        mov eax, fileHandle
+        mov eax, fileHandle 
         mov ecx, 1
         mov edx, OFFSET buffer
         call ReadFromFile
@@ -184,17 +184,23 @@ lp_read_bytes:
     ; 進行灰階化並儲存到 byteArray
     mov edx, 0
     mov eax, edi
-    mov ecx, 3
+    ; 這裡因為灰階化而除以 3，又因正規化除以 25
+    mov ecx, 75
     div ecx
+    ; 修正字元值
+    add eax, 65
     mov [byteArray + esi], al
     inc esi
     pop ecx
 loop lp_read_bytes
 
-mov esi, OFFSET byteArray
-mov ebx, TYPE byteArray
-mov ecx, LENGTHOF byteArray
-call DumpMem
+; mov esi, OFFSET byteArray
+; mov ebx, TYPE byteArray
+; mov ecx, LENGTHOF byteArray
+; call DumpMem
+
+mov edx, OFFSET byteArray
+call WriteString
 
 ; 關閉檔案
 mov eax, fileHandle
@@ -206,4 +212,4 @@ quit:
 exit
 main ENDP
 
-END main
+END main  
