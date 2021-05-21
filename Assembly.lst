@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.28.29915.0	    05/21/21 00:39:11
+Microsoft (R) Macro Assembler Version 14.28.29915.0	    05/21/21 16:46:01
 Source.asm						     Page 1 - 1
 
 
@@ -22,6 +22,7 @@ Source.asm						     Page 1 - 1
 			      C 
 
  00000000			.data
+				; 讀取 Console 資訊相關變數
  00000000 0000 0000 0000	consoleInfo	CONSOLE_SCREEN_BUFFER_INFO <>
 	   0000 0000 0000
 	   0000 0000 0000
@@ -29,9 +30,29 @@ Source.asm						     Page 1 - 1
  00000016 00000000		consoleRowSize DWORD ?
  0000001A 00000000		consoleColumnSize DWORD ?
 
- 0000001E  00002710 [		output BYTE 10000 DUP(?), 0
-	    00
-	   ] 00
+				; 開檔相關變數
+ 0000001E 66 72 61 6D 65	imagePath BYTE "frames/image.bmp", 0
+	   73 2F 69 6D 61
+	   67 65 2E 62 6D
+	   70 00
+ 0000002F 00000000		fileHandle HANDLE ?
+ 00000033 00			fileType BYTE 2 DUP(?), 0
+ 00000036 00000000		fileSize DWORD ?
+ 0000003A 0000			dataOffset WORD ?
+ 0000003C 00000000		imageWidth DWORD ?
+ 00000040 00000000		imageHeight DWORD ?
+ 00000044 00000000		imageSize DWORD ?
+ 00000048 00000000		buffer DWORD ?
+ 0000004C 00			byteArray BYTE 10016 DUP(?), 0
+
+				; 字串常數
+ 0000276D 45 52 52 4F 52	fileError BYTE "ERROR: Failed to open the image!", 10, 0
+	   3A 20 46 61 69
+	   6C 65 64 20 74
+	   6F 20 6F 70 65
+	   6E 20 74 68 65
+	   20 69 6D 61 67
+	   65 21 0A 00
 
  00000000			.code
  00000000			main PROC
@@ -41,9 +62,11 @@ Source.asm						     Page 1 - 1
 				; 呼叫 GetConsoleScreenBufferInfo() 取得 consoleInfo
 				; consoleRowSize = consoleInfo.srWindow.Bottom - consoleInfo.srWindow.Top
 				; consoleColumnSize = consoleInfo.srWindow.Right - consoleInfo.srWindow.Left
+				; 實際大小應該還要再 +1 (可依狀況調整)
 
-				invoke GetStdHandle, STD_OUTPUT_HANDLE
-				invoke GetConsoleScreenBufferInfo, eax, addr consoleInfo
+				INVOKE GetStdHandle, STD_OUTPUT_HANDLE
+				; EAX 已存入從上面指令取得之 StdHandle
+				INVOKE GetConsoleScreenBufferInfo, eax, ADDR consoleInfo
 
  00000012  0F B7 05		movzx eax, consoleInfo.srWindow.Bottom
 	   00000010 R
@@ -60,45 +83,167 @@ Source.asm						     Page 1 - 1
  00000036  2B C3		sub eax, ebx
  00000038  A3 0000001A R	mov consoleColumnSize, eax
 
-				; Test Output
- 0000003D  B2 2A		mov dl, 42
- 0000003F  BE 00000000		mov esi, 0
- 00000044  8B 0D 00000016 R	mov ecx, consoleRowSize
- 0000004A			L1 :
- 0000004A  51				push ecx
- 0000004B  8B 0D 0000001A R		mov ecx, consoleColumnSize
- 00000051				L2 :
- 00000051  88 96 0000001E R			mov output[esi], dl
- 00000057  46					inc esi
- 00000058  E2 F7			loop L2
- 0000005A  C6 86 0000001E R		mov output[esi], 10
-	   0A
- 00000061  59				pop ecx
- 00000062  46				inc esi
- 00000063  E2 E5		loop L1
+				; 測試輸出
+				; mov dl, 42
+				; mov esi, 0
+				; mov ecx, consoleRowSize
+				; L1 :
+				; 	push ecx
+				; 	mov ecx, consoleColumnSize
+				; 	L2 :
+				; 		mov byteArray[esi], dl
+				; 		inc esi
+				; 	loop L2
+				; 	mov byteArray[esi], 10
+				; 	pop ecx
+				; 	inc esi
+				; loop L1
 
- 00000065  BA 0000001E R	mov edx, OFFSET output
- 0000006A  E8 00000000 E	call WriteString
- 0000006F  E8 00000000 E	call Crlf
+				; mov edx, OFFSET byteArray
+				; call WriteString
+				; call Crlf
 
-				;push esi
-				;push ecx
-				;mov esi, OFFSET output
-				;mov ebx, TYPE output
-				;mov ecx, LENGTHOF output
-				;call DumpMem
-				;pop ecx
-				;pop esi
+				; push esi
+				; push ecx
+				; mov esi, OFFSET byteArray
+				; mov ebx, TYPE byteArray
+				; mov ecx, LENGTHOF byteArray
+				; call DumpMem
+				; pop ecx
+				; pop esi
 
+				; -----------------------------------------------------------------------------
+				; 讀取 BMP 檔案
+				; 使用 Irvine32 Library 函式呼叫
+
+ 0000003D  BA 0000001E R	mov edx, OFFSET imagePath
+				; 開啟檔案: (參數) EDX = 圖片位置 (回傳) EAX = FileHandle
+ 00000042  E8 00000000 E	call OpenInputFile
+				; 若無法成功開啟檔案，擲回 INVALID_HANDLE_VALUE 到 EAX
+ 00000047  83 F8 FF		cmp eax, INVALID_HANDLE_VALUE
+				; 當條件不相等時跳轉 (jump-if-not-equal)
+ 0000004A  75 0F		jne file_ok
+
+				; 顯示錯誤警告
+ 0000004C			file_error:
+ 0000004C  BA 0000276D R	    mov edx, OFFSET fileError
+ 00000051  E8 00000000 E	    call WriteString
+ 00000056  E9 00000120		    jmp quit
+
+				; 成功開啟檔案
+ 0000005B			file_ok:
+ 0000005B  A3 0000002F R	    mov fileHandle, eax
+
+				; 讀取資料: (參數) EAX = FileHandle
+				;                ECX = 讀取位元組數量
+				;                EDX = 緩衝區
+				;         (回傳) EAX = 讀取位元組數量，錯誤則擲回錯誤代碼
+
+				; 讀取檔案格式 
+ 00000060  A1 0000002F R	mov eax, fileHandle
+ 00000065  B9 00000002		mov ecx, 2
+ 0000006A  BA 00000033 R	mov edx, OFFSET fileType
+ 0000006F  E8 00000000 E	call ReadFromFile
+
+				; 讀取檔案大小
+ 00000074  A1 0000002F R	mov eax, fileHandle
+ 00000079  B9 00000004		mov ecx, 4
+ 0000007E  BA 00000036 R	mov edx, OFFSET fileSize
+ 00000083  E8 00000000 E	call ReadFromFile
+
+				; 增加 4 Bytes 偏移量
+				INVOKE SetFilePointer,
+				    fileHandle,
+				    4,
+				    0,
+				    FILE_CURRENT
+
+				; 讀取資料偏移位元組數
+ 00000099  A1 0000002F R	mov eax, fileHandle
+ 0000009E  B9 00000001		mov ecx, 1
+ 000000A3  BA 0000003A R	mov edx, OFFSET dataOffset
+ 000000A8  E8 00000000 E	call ReadFromFile
+
+				; 增加 7 Bytes 偏移量
+				INVOKE SetFilePointer,
+				    fileHandle,
+				    7, 
+				    0,
+				    FILE_CURRENT
+
+				; 讀取圖片寬度
+ 000000BE  A1 0000002F R	mov eax, fileHandle
+ 000000C3  B9 00000004		mov ecx, 4
+ 000000C8  BA 0000003C R	mov edx, OFFSET imageWidth
+ 000000CD  E8 00000000 E	call ReadFromFile
+
+				; 讀取圖片高度
+ 000000D2  A1 0000002F R	mov eax, fileHandle
+ 000000D7  B9 00000004		mov ecx, 4
+ 000000DC  BA 00000040 R	mov edx, OFFSET imageHeight
+ 000000E1  E8 00000000 E	call ReadFromFile
+
+				; 計算圖片像素數量
+				; imageSize = imageWidth * imageHeight
+				; TODO: 注意乘法範圍
+ 000000E6  A1 0000003C R	mov eax, imageWidth
+ 000000EB  8B 1D 00000040 R	mov ebx, imageHeight
+ 000000F1  F7 E3		mul ebx
+ 000000F3  A3 00000044 R	mov imageSize, eax
+
+				; 增加 {dataOffset} Bytes 偏移量
+				INVOKE SetFilePointer,
+				    fileHandle,
+				    dataOffset, 
+				    0,
+				    FILE_BEGIN
+
+				; 讀取色彩資料
+				; EDI 用來暫時儲存連續讀到的 3 個值的合
+ 00000111  BF 00000000		mov edi, 0
+ 00000116  BE 00000000		mov esi, 0
+ 0000011B  8B 0D 00000044 R	mov ecx, imageSize
+ 00000121			lp_read_bytes:
+ 00000121  51			    push ecx
+ 00000122  B9 00000003		    mov ecx, 3
+ 00000127			    lp_read_rgb:
+ 00000127  51			        push ecx
+				        ; 讀取 RGB 三色值
+ 00000128  A1 0000002F R	        mov eax, fileHandle
+ 0000012D  B9 00000001		        mov ecx, 1
+ 00000132  BA 00000048 R	        mov edx, OFFSET buffer
+ 00000137  E8 00000000 E	        call ReadFromFile
+				        ; 加總三色值，待之後灰階化
+ 0000013C  03 3D 00000048 R	        add edi, buffer
+ 00000142  59			        pop ecx
+ 00000143  E2 E2		    loop lp_read_rgb
+				    ; 進行灰階化並儲存到 byteArray
+ 00000145  BA 00000000		    mov edx, 0
+ 0000014A  8B C7		    mov eax, edi
+ 0000014C  B9 00000003		    mov ecx, 3
+ 00000151  F7 F1		    div ecx
+ 00000153  88 86 0000004C R	    mov [byteArray + esi], al
+ 00000159  46			    inc esi
+ 0000015A  59			    pop ecx
+ 0000015B  E2 C4		loop lp_read_bytes
+
+ 0000015D  BE 0000004C R	mov esi, OFFSET byteArray
+ 00000162  BB 00000001		mov ebx, TYPE byteArray
+ 00000167  B9 00002721		mov ecx, LENGTHOF byteArray
+ 0000016C  E8 00000000 E	call DumpMem
+
+				; 關閉檔案
+ 00000171  A1 0000002F R	mov eax, fileHandle
+ 00000176  E8 00000000 E	call CloseFile
 
 				; -----------------------------------------------------------------------------
 
-
+ 0000017B			quit:
 				exit
- 0000007B			main ENDP
+ 00000182			main ENDP
 
 				END main
-Microsoft (R) Macro Assembler Version 14.28.29915.0	    05/21/21 00:39:11
+Microsoft (R) Macro Assembler Version 14.28.29915.0	    05/21/21 16:46:01
 Source.asm						     Symbols 2 - 1
 
 
@@ -192,8 +337,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 0000272F Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 0000007B Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 0000278F Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 00000182 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -300,9 +445,12 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000007B Public STDCALL
-  L1 . . . . . . . . . . . . . .	L Near	 0000004A _TEXT	
-  L2 . . . . . . . . . . . . . .	L Near	 00000051 _TEXT	
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000182 Public STDCALL
+  file_error . . . . . . . . . .	L Near	 0000004C _TEXT	
+  file_ok  . . . . . . . . . . .	L Near	 0000005B _TEXT	
+  lp_read_bytes  . . . . . . . .	L Near	 00000121 _TEXT	
+  lp_read_rgb  . . . . . . . . .	L Near	 00000127 _TEXT	
+  quit . . . . . . . . . . . . .	L Near	 0000017B _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -524,13 +672,24 @@ WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
 black  . . . . . . . . . . . . .	Number	 00000000h   
 blue . . . . . . . . . . . . . .	Number	 00000001h   
 brown  . . . . . . . . . . . . .	Number	 00000006h   
+buffer . . . . . . . . . . . . .	DWord	 00000048 _DATA	
+byteArray  . . . . . . . . . . .	Byte	 0000004C _DATA	
 consoleColumnSize  . . . . . . .	DWord	 0000001A _DATA	
 consoleInfo  . . . . . . . . . .	CONSOLE_SCREEN_BUFFER_INFO  00000000 _DATA	
 consoleRowSize . . . . . . . . .	DWord	 00000016 _DATA	
 cyan . . . . . . . . . . . . . .	Number	 00000003h   
+dataOffset . . . . . . . . . . .	Word	 0000003A _DATA	
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
+fileError  . . . . . . . . . . .	Byte	 0000276D _DATA	
+fileHandle . . . . . . . . . . .	DWord	 0000002F _DATA	
+fileSize . . . . . . . . . . . .	DWord	 00000036 _DATA	
+fileType . . . . . . . . . . . .	Byte	 00000033 _DATA	
 gray . . . . . . . . . . . . . .	Number	 00000008h   
 green  . . . . . . . . . . . . .	Number	 00000002h   
+imageHeight  . . . . . . . . . .	DWord	 00000040 _DATA	
+imagePath  . . . . . . . . . . .	Byte	 0000001E _DATA	
+imageSize  . . . . . . . . . . .	DWord	 00000044 _DATA	
+imageWidth . . . . . . . . . . .	DWord	 0000003C _DATA	
 lightBlue  . . . . . . . . . . .	Number	 00000009h   
 lightCyan  . . . . . . . . . . .	Number	 0000000Bh   
 lightGray  . . . . . . . . . . .	Number	 00000007h   
@@ -538,7 +697,6 @@ lightGreen . . . . . . . . . . .	Number	 0000000Ah
 lightMagenta . . . . . . . . . .	Number	 0000000Dh   
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
-output . . . . . . . . . . . . .	Byte	 0000001E _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
