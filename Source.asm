@@ -17,10 +17,13 @@ imageHeight DWORD ?
 imageSize DWORD ?
 buffer DWORD ?
 ; TODO: 動態配置，定義上限值
-byteArray BYTE 10000 DUP(?), 0
+byteArray BYTE 20000 DUP(?), 0
 
 ; 字串常數
 fileError BYTE "ERROR: Failed to open the image!", 10, 0
+message1 BYTE "byteArray length: ", 0
+; asciiArray BYTE "@#$%?*+;:,.", 0
+asciiArray BYTE ".,:;+*?%$#@", 0
 
 .code
 main PROC
@@ -46,35 +49,6 @@ movzx eax, consoleInfo.srWindow.Right
 movzx ebx, consoleInfo.srWindow.Left
 sub eax, ebx
 mov consoleColumnSize, eax
-
-; 測試輸出
-; mov dl, 42
-; mov esi, 0
-; mov ecx, consoleRowSize
-; L1 :
-; 	push ecx
-; 	mov ecx, consoleColumnSize
-; 	L2 :
-; 		mov byteArray[esi], dl
-; 		inc esi
-; 	loop L2
-; 	mov byteArray[esi], 10
-; 	pop ecx
-; 	inc esi
-; loop L1
-
-; mov edx, OFFSET byteArray
-; call WriteString
-; call Crlf
-
-; push esi
-; push ecx
-; mov esi, OFFSET byteArray
-; mov ebx, TYPE byteArray
-; mov ecx, LENGTHOF byteArray
-; call DumpMem
-; pop ecx
-; pop esi
 
 ; -----------------------------------------------------------------------------
 ; 讀取 BMP 檔案
@@ -187,26 +161,59 @@ lp_read_bytes:
     ; 這裡因為灰階化而除以 3，又因正規化除以 25
     mov ecx, 75
     div ecx
-    ; 修正字元值
-    add eax, 65
-    mov [byteArray + esi], al
+    
+    ; 轉換成字元並儲存
+    push esi
+    mov esi, eax
+    mov dl, [asciiArray + esi]
+    pop esi
+    mov [byteArray + esi], dl
+
     inc esi
     pop ecx
+
+    ; 字串分行切換
+    ; 插入換行位置公式: (ESI - imageWidth) % (imageWidth + 1) == 0
+    ; 適用範圍 ESI >= imageWidth
+    ; 檢查 ESI 是否大於 imageWidth
+    cmp esi, imageWidth
+    ; 若 左值 < 右值 則跳過
+    jb continue_read
+    push ecx
+    mov edx, 0
+    mov eax, esi
+    sub eax, imageWidth
+    mov ecx, imageWidth
+    inc ecx
+    div ecx
+    pop ecx
+    cmp edx, 0
+    jne continue_read
+    add_newline:
+        mov[byteArray + esi], 10
+        inc esi
+    continue_read:
 loop lp_read_bytes
-
-; mov esi, OFFSET byteArray
-; mov ebx, TYPE byteArray
-; mov ecx, LENGTHOF byteArray
-; call DumpMem
-
-mov edx, OFFSET byteArray
-call WriteString
 
 ; 關閉檔案
 mov eax, fileHandle
 call CloseFile
 
 ; -----------------------------------------------------------------------------
+; 測試輸出
+; mov esi, OFFSET byteArray
+; mov ebx, TYPE byteArray
+; mov ecx, LENGTHOF byteArray
+; call DumpMem
+mov edx, OFFSET byteArray
+call WriteString
+
+mov edx, OFFSET message1
+call WriteString
+
+INVOKE Str_length, ADDR byteArray
+call WriteDec
+call Crlf
 
 quit:
 exit
