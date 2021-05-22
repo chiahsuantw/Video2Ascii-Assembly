@@ -63,13 +63,13 @@ cmp eax, INVALID_HANDLE_VALUE
 jne file_ok
 
 ; 顯示錯誤警告
-file_error :
+file_error:
 mov edx, OFFSET fileError
 call WriteString
 jmp quit
 
 ; 成功開啟檔案
-file_ok :
+file_ok:
 mov fileHandle, eax
 
 ; 讀取資料: (參數)EAX = FileHandle
@@ -139,7 +139,7 @@ FILE_BEGIN
 ; 讀取色彩資料
 mov esi, 0
 mov ecx, imageSize
-lp_read_bytes :
+lp_read_bytes:
 ; EDI 用來暫時儲存 RGB 3 個值的合
 mov edi, 0
 push ecx
@@ -189,10 +189,10 @@ cmp esi, imageWidth
     pop ecx
     cmp edx, 0
     jne continue_read
-    add_newline :
+    add_newline:
 mov[byteArray + esi], 10
 inc esi
-continue_read :
+continue_read:
 loop lp_read_bytes
 
 ; 關閉檔案
@@ -215,7 +215,7 @@ INVOKE Str_length, ADDR byteArray
 call WriteDec
 call Crlf
 
-quit :
+quit:
 exit
 main ENDP
 
