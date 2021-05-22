@@ -1,13 +1,1 @@
-Debug/Source.obj
-Debug/Video2Acsii.exe
-Debug/Video2Acsii.exe.recipe
-Debug/Video2Acsii.ilk
-Debug/Video2Acsii.log
-Debug/Video2Acsii.pdb
-Debug/Video2Acsii.vcxproj.FileListAbsolute.txt
-Debug/Video2Acsii.tlog/link.command.1.tlog
-Debug/Video2Acsii.tlog/link.read.1.tlog
-Debug/Video2Acsii.tlog/link.write.1.tlog
-Debug/Video2Acsii.tlog/Masm.read.1u.tlog
-Debug/Video2Acsii.tlog/Masm.write.1u.tlog
-Debug/Video2Acsii.tlog/Video2Acsii.lastbuildstate
+Debug/*
