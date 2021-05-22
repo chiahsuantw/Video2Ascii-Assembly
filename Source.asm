@@ -1,12 +1,12 @@
 INCLUDE Irvine32.inc
 
 .data
-; Åª¨ú Console ¸ê°T¬ÛÃöÅÜ¼Æ
+; è®€å– Console è³‡è¨Šç›¸é—œè®Šæ•¸
 consoleInfo	CONSOLE_SCREEN_BUFFER_INFO <>
 consoleRowSize DWORD ?
 consoleColumnSize DWORD ?
 
-; ¶}ÀÉ¬ÛÃöÅÜ¼Æ
+; é–‹æª”ç›¸é—œè®Šæ•¸
 imagePath BYTE "frames/image.bmp", 0
 fileHandle HANDLE ?
 fileType BYTE 2 DUP(? ), 0
@@ -16,10 +16,10 @@ imageWidth DWORD ?
 imageHeight DWORD ?
 imageSize DWORD ?
 buffer DWORD ?
-; TODO: °ÊºA°t¸m¡A©w¸q¤W­­­È
+; TODO: å‹•æ…‹é…ç½®ï¼Œå®šç¾©ä¸Šé™å€¼
 byteArray BYTE 20000 DUP(? ), 0
 
-; ¦r¦ê±`¼Æ
+; å­—ä¸²å¸¸æ•¸
 fileError BYTE "ERROR: Failed to open the image!", 10, 0
 message1 BYTE "byteArray length: ", 0
 ; asciiArray BYTE "@#$%?*+;:,.", 0
@@ -29,14 +29,14 @@ asciiArray BYTE ".,:;+*?%$#@", 0
 main PROC
 
 ; ---------------------------------------------------------------------------- -
-; ¨ú±o Console Åã¥Üµøµ¡ªø¼e
-; ©I¥s GetConsoleScreenBufferInfo() ¨ú±o consoleInfo
+; å–å¾— Console é¡¯ç¤ºè¦–çª—é•·å¯¬
+; å‘¼å« GetConsoleScreenBufferInfo() å–å¾— consoleInfo
 ; consoleRowSize = consoleInfo.srWindow.Bottom - consoleInfo.srWindow.Top
 ; consoleColumnSize = consoleInfo.srWindow.Right - consoleInfo.srWindow.Left
-; ¹ê»Ú¤j¤pÀ³¸ÓÁÙ­n¦A + 1 (¥i¨Ìª¬ªp½Õ¾ã)
+; å¯¦éš›å¤§å°æ‡‰è©²é‚„è¦å† + 1 (å¯ä¾ç‹€æ³èª¿æ•´)
 
 INVOKE GetStdHandle, STD_OUTPUT_HANDLE
-; EAX ¤w¦s¤J±q¤W­±«ü¥O¨ú±o¤§ StdHandle
+; EAX å·²å­˜å…¥å¾ä¸Šé¢æŒ‡ä»¤å–å¾—ä¹‹ StdHandle
 INVOKE GetConsoleScreenBufferInfo, eax, ADDR consoleInfo
 
 movzx eax, consoleInfo.srWindow.Bottom
@@ -51,118 +51,118 @@ sub eax, ebx
 mov consoleColumnSize, eax
 
 ; ---------------------------------------------------------------------------- -
-; Åª¨ú BMP ÀÉ®×
-; ¨Ï¥Î Irvine32 Library ¨ç¦¡©I¥s
+; è®€å– BMP æª”æ¡ˆ
+; ä½¿ç”¨ Irvine32 Library å‡½å¼å‘¼å«
 
 mov edx, OFFSET imagePath
-; ¶}±ÒÀÉ®×: (°Ñ¼Æ)EDX = ¹Ï¤ù¦ì¸m(¦^¶Ç) EAX = FileHandle
+; é–‹å•Ÿæª”æ¡ˆ: (åƒæ•¸)EDX = åœ–ç‰‡ä½ç½®(å›å‚³) EAX = FileHandle
 call OpenInputFile
-; ­YµLªk¦¨¥\¶}±ÒÀÉ®×¡AÂY¦^ INVALID_HANDLE_VALUE ¨ì EAX
+; è‹¥ç„¡æ³•æˆåŠŸé–‹å•Ÿæª”æ¡ˆï¼Œæ“²å› INVALID_HANDLE_VALUE åˆ° EAX
 cmp eax, INVALID_HANDLE_VALUE
-; ·í±ø¥ó¤£¬Ûµ¥®É¸õÂà(jump - if - not- equal)
+; ç•¶æ¢ä»¶ä¸ç›¸ç­‰æ™‚è·³è½‰(jump - if - not- equal)
 jne file_ok
 
-; Åã¥Ü¿ù»~Äµ§i
+; é¡¯ç¤ºéŒ¯èª¤è­¦å‘Š
 file_error :
 mov edx, OFFSET fileError
 call WriteString
 jmp quit
 
-; ¦¨¥\¶}±ÒÀÉ®×
+; æˆåŠŸé–‹å•Ÿæª”æ¡ˆ
 file_ok :
 mov fileHandle, eax
 
-; Åª¨ú¸ê®Æ: (°Ñ¼Æ)EAX = FileHandle
-;                ECX = Åª¨ú¦ì¤¸²Õ¼Æ¶q
-;                EDX = ½w½Ä°Ï
-;         (¦^¶Ç)EAX = Åª¨ú¦ì¤¸²Õ¼Æ¶q¡A¿ù»~«hÂY¦^¿ù»~¥N½X
+; è®€å–è³‡æ–™: (åƒæ•¸)EAX = FileHandle
+;                ECX = è®€å–ä½å…ƒçµ„æ•¸é‡
+;                EDX = ç·©è¡å€
+;         (å›å‚³)EAX = è®€å–ä½å…ƒçµ„æ•¸é‡ï¼ŒéŒ¯èª¤å‰‡æ“²å›éŒ¯èª¤ä»£ç¢¼
 
-; Åª¨úÀÉ®×®æ¦¡
+; è®€å–æª”æ¡ˆæ ¼å¼
 mov eax, fileHandle
 mov ecx, 2
 mov edx, OFFSET fileType
 call ReadFromFile
 
-; Åª¨úÀÉ®×¤j¤p
+; è®€å–æª”æ¡ˆå¤§å°
 mov eax, fileHandle
 mov ecx, 4
 mov edx, OFFSET fileSize
 call ReadFromFile
 
-; ¼W¥[ 4 Bytes °¾²¾¶q
+; å¢åŠ  4 Bytes åç§»é‡
 INVOKE SetFilePointer,
 fileHandle,
 4,
 0,
 FILE_CURRENT
 
-; Åª¨ú¸ê®Æ°¾²¾¦ì¤¸²Õ¼Æ
+; è®€å–è³‡æ–™åç§»ä½å…ƒçµ„æ•¸
 mov eax, fileHandle
 mov ecx, 1
 mov edx, OFFSET dataOffset
 call ReadFromFile
 
-; ¼W¥[ 7 Bytes °¾²¾¶q
+; å¢åŠ  7 Bytes åç§»é‡
 INVOKE SetFilePointer,
 fileHandle,
 7,
 0,
 FILE_CURRENT
 
-; Åª¨ú¹Ï¤ù¼e«×
+; è®€å–åœ–ç‰‡å¯¬åº¦
 mov eax, fileHandle
 mov ecx, 4
 mov edx, OFFSET imageWidth
 call ReadFromFile
 
-; Åª¨ú¹Ï¤ù°ª«×
+; è®€å–åœ–ç‰‡é«˜åº¦
 mov eax, fileHandle
 mov ecx, 4
 mov edx, OFFSET imageHeight
 call ReadFromFile
 
-; ­pºâ¹Ï¤ù¹³¯À¼Æ¶q
+; è¨ˆç®—åœ–ç‰‡åƒç´ æ•¸é‡
 ; imageSize = imageWidth * imageHeight
-; TODO: ª`·N­¼ªk½d³ò
+; TODO: æ³¨æ„ä¹˜æ³•ç¯„åœ
 mov eax, imageWidth
 mov ebx, imageHeight
 mul ebx
 mov imageSize, eax
 
-; ¼W¥[{ dataOffset } Bytes °¾²¾¶q
+; å¢åŠ { dataOffset } Bytes åç§»é‡
 INVOKE SetFilePointer,
 fileHandle,
 dataOffset,
 0,
 FILE_BEGIN
 
-; Åª¨ú¦â±m¸ê®Æ
+; è®€å–è‰²å½©è³‡æ–™
 mov esi, 0
 mov ecx, imageSize
 lp_read_bytes :
-; EDI ¥Î¨Ó¼È®ÉÀx¦s RGB 3 ­Ó­Èªº¦X
+; EDI ç”¨ä¾†æš«æ™‚å„²å­˜ RGB 3 å€‹å€¼çš„åˆ
 mov edi, 0
 push ecx
 mov ecx, 3
 lp_read_rgb:
 push ecx
-; Åª¨ú RGB ¤T¦â­È
+; è®€å– RGB ä¸‰è‰²å€¼
 mov eax, fileHandle
 mov ecx, 1
 mov edx, OFFSET buffer
 call ReadFromFile
-; ¥[Á`¤T¦â­È¡A«İ¤§«á¦Ç¶¥¤Æ
+; åŠ ç¸½ä¸‰è‰²å€¼ï¼Œå¾…ä¹‹å¾Œç°éšåŒ–
 add edi, buffer
 pop ecx
 loop lp_read_rgb
-; ¶i¦æ¦Ç¶¥¤Æ¨ÃÀx¦s¨ì byteArray
+; é€²è¡Œç°éšåŒ–ä¸¦å„²å­˜åˆ° byteArray
 mov edx, 0
 mov eax, edi
-; ³o¸Ì¦]¬°¦Ç¶¥¤Æ¦Ó°£¥H 3¡A¤S¦]¥¿³W¤Æ°£¥H 25
+; é€™è£¡å› ç‚ºç°éšåŒ–è€Œé™¤ä»¥ 3ï¼Œåˆå› æ­£è¦åŒ–é™¤ä»¥ 25
 mov ecx, 75
 div ecx
 
-; Âà´«¦¨¦r¤¸¨ÃÀx¦s
+; è½‰æ›æˆå­—å…ƒä¸¦å„²å­˜
 push esi
 mov esi, eax
 mov dl, [asciiArray + esi]
@@ -172,12 +172,12 @@ mov[byteArray + esi], dl
 inc esi
 pop ecx
 
-; ¦r¦ê¤À¦æ¤Á´«
-; ´¡¤J´«¦æ¦ì¸m¤½¦¡: (ESI - imageWidth) % (imageWidth + 1) == 0
-; ¾A¥Î½d³ò ESI >= imageWidth
-; ÀË¬d ESI ¬O§_¤j©ó imageWidth
+; å­—ä¸²åˆ†è¡Œåˆ‡æ›
+; æ’å…¥æ›è¡Œä½ç½®å…¬å¼: (ESI - imageWidth) % (imageWidth + 1) == 0
+; é©ç”¨ç¯„åœ ESI >= imageWidth
+; æª¢æŸ¥ ESI æ˜¯å¦å¤§æ–¼ imageWidth
 cmp esi, imageWidth
-; ­Y ¥ª­È < ¥k­È «h¸õ¹L
+; è‹¥ å·¦å€¼ < å³å€¼ å‰‡è·³é
     jb continue_read
     push ecx
     mov edx, 0
@@ -195,12 +195,12 @@ inc esi
 continue_read :
 loop lp_read_bytes
 
-; Ãö³¬ÀÉ®×
+; é—œé–‰æª”æ¡ˆ
 mov eax, fileHandle
 call CloseFile
 
 ; ---------------------------------------------------------------------------- -
-; ´ú¸Õ¿é¥X
+; æ¸¬è©¦è¼¸å‡º
 ; mov esi, OFFSET byteArray
 ; mov ebx, TYPE byteArray
 ; mov ecx, LENGTHOF byteArray
