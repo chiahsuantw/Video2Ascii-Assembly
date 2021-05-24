@@ -199,6 +199,30 @@ loop lp_read_bytes
 mov eax, fileHandle
 call CloseFile
 
+; //// 字串反轉 ////
+; TODO: 如果可以反著存會更好
+INVOKE Str_length, ADDR byteArray
+dec eax
+mov ecx, eax
+mov esi,0
+L1:
+    movzx eax,byteArray[esi]; get character
+    push eax; push on stack
+    inc esi
+    loop L1
+; Pop the name from the stack in reverse
+; and store it in the byteArray array.
+INVOKE Str_length, ADDR byteArray
+dec eax
+mov ecx, eax
+mov esi,0
+L2:
+    pop eax; get character
+    mov byteArray[esi],al; store in string
+    inc esi
+    loop L2
+; ////
+
 ; ---------------------------------------------------------------------------- -
 ; 測試輸出
 ; mov esi, OFFSET byteArray
