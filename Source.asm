@@ -9,7 +9,7 @@ consoleColumnSize DWORD ?
 ; 開檔相關變數
 imagePath BYTE "frames/image.bmp", 0
 fileHandle HANDLE ?
-fileType BYTE 2 DUP(? ), 0
+fileType BYTE 2 DUP(?), 0
 fileSize DWORD ?
 dataOffset WORD ?
 imageWidth DWORD ?
@@ -17,7 +17,7 @@ imageHeight DWORD ?
 imageSize DWORD ?
 buffer DWORD ?
 ; TODO: 動態配置，定義上限值
-byteArray BYTE 20000 DUP(? ), 0
+byteArray BYTE 20000 DUP(?), 0
 
 ; 字串常數
 fileError BYTE "ERROR: Failed to open the image!", 10, 0
@@ -64,13 +64,13 @@ jne file_ok
 
 ; 顯示錯誤警告
 file_error:
-mov edx, OFFSET fileError
-call WriteString
-jmp quit
+    mov edx, OFFSET fileError
+    call WriteString
+    jmp quit
 
 ; 成功開啟檔案
 file_ok:
-mov fileHandle, eax
+    mov fileHandle, eax
 
 ; 讀取資料: (參數)EAX = FileHandle
 ;                ECX = 讀取位元組數量
@@ -137,62 +137,71 @@ dataOffset,
 FILE_BEGIN
 
 ; 讀取色彩資料
-mov esi, 0
+; 為了讓資料逆向儲存 (從陣列尾開始存)
+; 因此將 Index(ESI) 改為 imageSize + imageHeight (換行) - 1
+mov eax, imageSize
+add eax, imageHeight
+dec eax 
+mov esi, eax
 mov ecx, imageSize
 lp_read_bytes:
-; EDI 用來暫時儲存 RGB 3 個值的合
-mov edi, 0
-push ecx
-mov ecx, 3
-lp_read_rgb:
-push ecx
-; 讀取 RGB 三色值
-mov eax, fileHandle
-mov ecx, 1
-mov edx, OFFSET buffer
-call ReadFromFile
-; 加總三色值，待之後灰階化
-add edi, buffer
-pop ecx
-loop lp_read_rgb
-; 進行灰階化並儲存到 byteArray
-mov edx, 0
-mov eax, edi
-; 這裡因為灰階化而除以 3，又因正規化除以 25
-mov ecx, 75
-div ecx
-
-; 轉換成字元並儲存
-push esi
-mov esi, eax
-mov dl, [asciiArray + esi]
-pop esi
-mov[byteArray + esi], dl
-
-inc esi
-pop ecx
-
-; 字串分行切換
-; 插入換行位置公式: (ESI - imageWidth) % (imageWidth + 1) == 0
-; 適用範圍 ESI >= imageWidth
-; 檢查 ESI 是否大於 imageWidth
-cmp esi, imageWidth
-; 若 左值 < 右值 則跳過
-    jb continue_read
+    ; 字串分行切換
+    ; 插入換行位置公式: (imageSize + imageHeight - 1 - ESI) % (imageWidth + 1) == 0
     push ecx
     mov edx, 0
-    mov eax, esi
-    sub eax, imageWidth
+    ; mov eax, esi
+    ; sub eax, imageWidth
+    ; mov ecx, imageWidth
+    ; inc ecx
+    mov eax, imageSize
+    add eax, imageHeight
+    dec eax
+    sub eax, esi
     mov ecx, imageWidth
     inc ecx
     div ecx
-    pop ecx
     cmp edx, 0
     jne continue_read
     add_newline:
-mov[byteArray + esi], 10
-inc esi
-continue_read:
+        mov[byteArray + esi], 10
+        dec esi
+    continue_read:
+    pop ecx
+
+    ; 灰階化: 將三個顏色加總再除以 3
+    ; EDI 用來暫時儲存 RGB 3 個值的合
+    push ecx
+    mov edi, 0
+    mov ecx, 3
+    lp_read_rgb:
+        push ecx
+        ; 讀取 RGB 三色值
+        mov eax, fileHandle
+        mov ecx, 1
+        mov edx, OFFSET buffer
+        call ReadFromFile
+        ; 加總三色值，待之後灰階化
+        add edi, buffer
+        pop ecx
+    loop lp_read_rgb
+
+    ; 進行灰階化並儲存到 byteArray
+    mov edx, 0
+    mov eax, edi
+    ; 這裡因為灰階化而除以 3，又因正規化除以 25
+    ; 結果儲存在 EAX
+    mov ecx, 75
+    div ecx
+
+    ; 轉換成字元並儲存
+    push esi
+    mov esi, eax
+    mov dl, [asciiArray + esi]
+    pop esi
+    mov[byteArray + esi], dl
+
+    dec esi
+    pop ecx
 loop lp_read_bytes
 
 ; 關閉檔案
