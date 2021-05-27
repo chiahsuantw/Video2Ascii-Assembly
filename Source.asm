@@ -28,7 +28,7 @@ asciiArray BYTE ".,:;+*?%$#@", 0
 .code
 main PROC
 
-; ---------------------------------------------------------------------------- -
+; -----------------------------------------------------------------------------
 ; 取得 Console 顯示視窗長寬
 ; 呼叫 GetConsoleScreenBufferInfo() 取得 consoleInfo
 ; consoleRowSize = consoleInfo.srWindow.Bottom - consoleInfo.srWindow.Top
@@ -50,7 +50,7 @@ movzx ebx, consoleInfo.srWindow.Left
 sub eax, ebx
 mov consoleColumnSize, eax
 
-; ---------------------------------------------------------------------------- -
+; -----------------------------------------------------------------------------
 ; 讀取 BMP 檔案
 ; 使用 Irvine32 Library 函式呼叫
 
@@ -91,10 +91,10 @@ call ReadFromFile
 
 ; 增加 4 Bytes 偏移量
 INVOKE SetFilePointer,
-fileHandle,
-4,
-0,
-FILE_CURRENT
+    fileHandle,
+    4,
+    0,
+    FILE_CURRENT
 
 ; 讀取資料偏移位元組數
 mov eax, fileHandle
@@ -104,10 +104,10 @@ call ReadFromFile
 
 ; 增加 7 Bytes 偏移量
 INVOKE SetFilePointer,
-fileHandle,
-7,
-0,
-FILE_CURRENT
+    fileHandle,
+    7,
+    0,
+    FILE_CURRENT
 
 ; 讀取圖片寬度
 mov eax, fileHandle
@@ -131,10 +131,10 @@ mov imageSize, eax
 
 ; 增加{ dataOffset } Bytes 偏移量
 INVOKE SetFilePointer,
-fileHandle,
-dataOffset,
-0,
-FILE_BEGIN
+    fileHandle,
+    dataOffset,
+    0,
+    FILE_BEGIN
 
 ; 讀取色彩資料
 ; 為了讓資料逆向儲存 (從陣列尾開始存)
@@ -232,7 +232,7 @@ call CloseFile
 ;     loop L2
 ; ////
 
-; ---------------------------------------------------------------------------- -
+; -----------------------------------------------------------------------------
 ; 測試輸出
 ; mov esi, OFFSET byteArray
 ; mov ebx, TYPE byteArray
