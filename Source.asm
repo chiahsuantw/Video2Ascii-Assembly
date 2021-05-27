@@ -51,10 +51,55 @@ sub eax, ebx
 mov consoleColumnSize, eax
 
 ; TODO: 設定幀數變數
-; mov ecx, 2791
-; lp_frames:
-; push ecx
+mov ecx, 2791
+lp_frames:
+pushad
 
+call loadFrame
+
+popad ; 結束進入迴圈
+
+; 利用迴圈數 (ECX) 轉成圖片編號，再轉成檔案路徑
+mov esi, 7
+mov eax, 2791
+sub eax, ecx
+
+push ecx
+mov edx, 0
+mov ecx, 1000
+div ecx
+add eax, 48
+mov [imagePath + esi], al
+inc esi
+
+mov eax, edx
+mov edx, 0
+mov ecx, 100
+div ecx
+add eax, 48
+mov [imagePath + esi], al
+inc esi
+
+mov eax, edx
+mov edx, 0
+mov ecx, 10
+div ecx
+add eax, 48
+mov [imagePath + esi], al
+inc esi
+
+add edx, 48
+mov [imagePath + esi], dl
+
+pop ecx
+
+loop lp_frames
+
+quit::
+exit
+main ENDP
+
+loadFrame PROC
 ; -----------------------------------------------------------------------------
 ; 讀取 BMP 檔案
 ; 使用 Irvine32 Library 函式呼叫
@@ -252,52 +297,7 @@ call WriteString
 ; INVOKE Str_length, ADDR byteArray
 ; call WriteDec
 ; call Crlf
-
-; pop ecx ; 結束進入迴圈
-
-; ; 利用迴圈數 (ECX) 轉成圖片編號，再轉成檔案路徑
-; mov esi, 7
-; mov eax, 2791
-; sub eax, ecx
-
-; push ecx
-; mov edx, 0
-; mov ecx, 1000
-; div ecx
-; add eax, 48
-; mov [imagePath + esi], al
-; inc esi
-
-; mov eax, edx
-; mov edx, 0
-; mov ecx, 100
-; div ecx
-; add eax, 48
-; mov [imagePath + esi], al
-; inc esi
-
-; mov eax, edx
-; mov edx, 0
-; mov ecx, 10
-; div ecx
-; add eax, 48
-; mov [imagePath + esi], al
-; inc esi
-
-; add edx, 48
-; mov [imagePath + esi], dl
-
-; pop ecx
-
-; mov edx, OFFSET imagePath
-; call WriteString
-
-
-; loop lp_frames
-
-
-quit:
-exit
-main ENDP
+ret
+loadFrame ENDP
 
 END main
