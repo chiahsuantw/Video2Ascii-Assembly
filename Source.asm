@@ -7,7 +7,7 @@ consoleRowSize DWORD ?
 consoleColumnSize DWORD ?
 
 ; 開檔相關變數
-imagePath BYTE "frames/image.bmp", 0
+imagePath BYTE "frames/0000.bmp", 0
 fileHandle HANDLE ?
 fileType BYTE 2 DUP(?), 0
 fileSize DWORD ?
@@ -49,6 +49,11 @@ movzx eax, consoleInfo.srWindow.Right
 movzx ebx, consoleInfo.srWindow.Left
 sub eax, ebx
 mov consoleColumnSize, eax
+
+; TODO: 設定幀數變數
+; mov ecx, 2791
+; lp_frames:
+; push ecx
 
 ; -----------------------------------------------------------------------------
 ; 讀取 BMP 檔案
@@ -198,7 +203,7 @@ lp_read_bytes:
     mov esi, eax
     mov dl, [asciiArray + esi]
     pop esi
-    mov[byteArray + esi], dl
+    mov [byteArray + esi], dl
 
     dec esi
     pop ecx
@@ -241,12 +246,55 @@ call CloseFile
 mov edx, OFFSET byteArray
 call WriteString
 
-mov edx, OFFSET message1
-call WriteString
+; mov edx, OFFSET message1
+; call WriteString
 
-INVOKE Str_length, ADDR byteArray
-call WriteDec
-call Crlf
+; INVOKE Str_length, ADDR byteArray
+; call WriteDec
+; call Crlf
+
+; pop ecx ; 結束進入迴圈
+
+; ; 利用迴圈數 (ECX) 轉成圖片編號，再轉成檔案路徑
+; mov esi, 7
+; mov eax, 2791
+; sub eax, ecx
+
+; push ecx
+; mov edx, 0
+; mov ecx, 1000
+; div ecx
+; add eax, 48
+; mov [imagePath + esi], al
+; inc esi
+
+; mov eax, edx
+; mov edx, 0
+; mov ecx, 100
+; div ecx
+; add eax, 48
+; mov [imagePath + esi], al
+; inc esi
+
+; mov eax, edx
+; mov edx, 0
+; mov ecx, 10
+; div ecx
+; add eax, 48
+; mov [imagePath + esi], al
+; inc esi
+
+; add edx, 48
+; mov [imagePath + esi], dl
+
+; pop ecx
+
+; mov edx, OFFSET imagePath
+; call WriteString
+
+
+; loop lp_frames
+
 
 quit:
 exit
