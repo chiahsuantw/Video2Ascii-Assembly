@@ -1,3 +1,20 @@
+; -----------------------------------------------------------------------------
+; 組合語言期末專題 - Video2Ascii
+;
+; Authors:
+; 廖健棚 A1085508
+; 林嘉軒 A1085512
+; 谷傳恩 A1085519
+; 藍哲綸 A1085521
+; 謝卓均 A1085540
+;
+; Info:
+; 讀取影片 (連續圖片檔案) 並轉換輸出成 ASCII 圖像
+; 圖片檔案名稱應該依照規定編號 0000.bmp ~ 9999.bmp
+; 將所有檔案儲存在 ./frames 資料夾下
+; 重要：圖片寬度應為 4 的倍數！
+; -----------------------------------------------------------------------------
+
 INCLUDE Irvine32.inc
 
 .data
@@ -27,7 +44,6 @@ asciiArray BYTE ".,:;+*?%$#@", 0
 
 .code
 main PROC
-
 ; -----------------------------------------------------------------------------
 ; 取得 Console 顯示視窗長寬
 ; 呼叫 GetConsoleScreenBufferInfo() 取得 consoleInfo
@@ -50,66 +66,71 @@ movzx ebx, consoleInfo.srWindow.Left
 sub eax, ebx
 mov consoleColumnSize, eax
 
+; -----------------------------------------------------------------------------
+; 連續讀取畫面
+; 呼叫 displayFrame 程序來讀取一個圖像 (Frame)
+; 修改讀取的檔案路徑，來改變下次進入迴圈讀取的圖像
 ; TODO: 設定幀數變數
 mov ecx, 2791
 lp_frames:
-pushad
+    pushad
+    call displayFrame
+    popad
 
-call loadFrame
+    ; TODO: 可以寫成 PROC
+    ; 利用迴圈數 (ECX) 轉成圖片編號，再轉成檔案路徑
+    ; ESI 初始值為 7，移動到圖片路徑 (imagePath) 之編號位置
+    ; totalFrames - ECX = 需要讀取的檔案編號
+    mov esi, 7
+    mov eax, 2791
+    sub eax, ecx
 
-popad ; 結束進入迴圈
+    ; 透過 DIV 取商數和餘數，來解析各個位數
+    ; 最後轉為字元存到圖片路徑
+    push ecx
+    mov edx, 0
+    mov ecx, 1000
+    div ecx
+    add eax, 48
+    mov [imagePath + esi], al
+    inc esi
 
-; 利用迴圈數 (ECX) 轉成圖片編號，再轉成檔案路徑
-mov esi, 7
-mov eax, 2791
-sub eax, ecx
+    mov eax, edx
+    mov edx, 0
+    mov ecx, 100
+    div ecx
+    add eax, 48
+    mov [imagePath + esi], al
+    inc esi
 
-push ecx
-mov edx, 0
-mov ecx, 1000
-div ecx
-add eax, 48
-mov [imagePath + esi], al
-inc esi
+    mov eax, edx
+    mov edx, 0
+    mov ecx, 10
+    div ecx
+    add eax, 48
+    mov [imagePath + esi], al
+    inc esi
 
-mov eax, edx
-mov edx, 0
-mov ecx, 100
-div ecx
-add eax, 48
-mov [imagePath + esi], al
-inc esi
-
-mov eax, edx
-mov edx, 0
-mov ecx, 10
-div ecx
-add eax, 48
-mov [imagePath + esi], al
-inc esi
-
-add edx, 48
-mov [imagePath + esi], dl
-
-pop ecx
-
+    add edx, 48
+    mov [imagePath + esi], dl
+    pop ecx
 loop lp_frames
 
 quit::
 exit
 main ENDP
 
-loadFrame PROC
+displayFrame PROC
 ; -----------------------------------------------------------------------------
 ; 讀取 BMP 檔案
 ; 使用 Irvine32 Library 函式呼叫
 
 mov edx, OFFSET imagePath
-; 開啟檔案: (參數)EDX = 圖片位置(回傳) EAX = FileHandle
+; 開啟檔案: (參數) EDX = 圖片位置 / (回傳) EAX = FileHandle
 call OpenInputFile
 ; 若無法成功開啟檔案，擲回 INVALID_HANDLE_VALUE 到 EAX
 cmp eax, INVALID_HANDLE_VALUE
-; 當條件不相等時跳轉(jump - if - not- equal)
+; 當條件不相等時跳轉 (jump - if - not- equal)
 jne file_ok
 
 ; 顯示錯誤警告
@@ -122,10 +143,10 @@ file_error:
 file_ok:
     mov fileHandle, eax
 
-; 讀取資料: (參數)EAX = FileHandle
+; 讀取資料: (參數) EAX = FileHandle
 ;                ECX = 讀取位元組數量
 ;                EDX = 緩衝區
-;         (回傳)EAX = 讀取位元組數量，錯誤則擲回錯誤代碼
+;         (回傳) EAX = 讀取位元組數量，錯誤則擲回錯誤代碼
 
 ; 讀取檔案格式
 mov eax, fileHandle
@@ -179,7 +200,7 @@ mov ebx, imageHeight
 mul ebx
 mov imageSize, eax
 
-; 增加{ dataOffset } Bytes 偏移量
+; 增加 { dataOffset } Bytes 偏移量
 INVOKE SetFilePointer,
     fileHandle,
     dataOffset,
@@ -191,7 +212,7 @@ INVOKE SetFilePointer,
 ; 因此將 Index(ESI) 改為 imageSize + imageHeight (換行) - 1
 mov eax, imageSize
 add eax, imageHeight
-dec eax 
+dec eax
 mov esi, eax
 mov ecx, imageSize
 lp_read_bytes:
@@ -199,10 +220,6 @@ lp_read_bytes:
     ; 插入換行位置公式: (imageSize + imageHeight - 1 - ESI) % (imageWidth + 1) == 0
     push ecx
     mov edx, 0
-    ; mov eax, esi
-    ; sub eax, imageWidth
-    ; mov ecx, imageWidth
-    ; inc ecx
     mov eax, imageSize
     add eax, imageHeight
     dec eax
@@ -258,46 +275,12 @@ loop lp_read_bytes
 mov eax, fileHandle
 call CloseFile
 
-; //// 字串反轉 ////
-; TODO: 如果可以反著存會更好
-; INVOKE Str_length, ADDR byteArray
-; dec eax
-; mov ecx, eax
-; mov esi,0
-; L1:
-;     movzx eax,byteArray[esi]; get character
-;     push eax; push on stack
-;     inc esi
-;     loop L1
-; Pop the name from the stack in reverse
-; and store it in the byteArray array.
-; INVOKE Str_length, ADDR byteArray
-; dec eax
-; mov ecx, eax
-; mov esi,0
-; L2:
-;     pop eax; get character
-;     mov byteArray[esi],al; store in string
-;     inc esi
-;     loop L2
-; ////
-
 ; -----------------------------------------------------------------------------
-; 測試輸出
-; mov esi, OFFSET byteArray
-; mov ebx, TYPE byteArray
-; mov ecx, LENGTHOF byteArray
-; call DumpMem
+; 輸出畫面
 mov edx, OFFSET byteArray
 call WriteString
 
-; mov edx, OFFSET message1
-; call WriteString
-
-; INVOKE Str_length, ADDR byteArray
-; call WriteDec
-; call Crlf
 ret
-loadFrame ENDP
+displayFrame ENDP
 
 END main
