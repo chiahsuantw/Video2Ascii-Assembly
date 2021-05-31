@@ -19,7 +19,7 @@ INCLUDE Irvine32.inc
 
 .data
 ; 讀取 Console 資訊相關變數
-consoleInfo	CONSOLE_SCREEN_BUFFER_INFO <>
+consoleInfo CONSOLE_SCREEN_BUFFER_INFO <>
 consoleRowSize DWORD ?
 consoleColumnSize DWORD ?
 
