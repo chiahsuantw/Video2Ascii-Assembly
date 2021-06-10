@@ -16,6 +16,7 @@
 ; -----------------------------------------------------------------------------
 
 INCLUDE Irvine32.inc
+INCLUDE macros.inc
 
 .data
 ; 讀取 Console 資訊相關變數
@@ -35,11 +36,10 @@ imageSize DWORD ?
 buffer DWORD ?
 ; TODO: 動態配置，定義上限值
 byteArray BYTE 20000 DUP(?), 0
+totalFrames DWORD 2791
 
 ; 字串常數
 fileError BYTE "ERROR: Failed to open the image!", 10, 0
-message1 BYTE "byteArray length: ", 0
-; asciiArray BYTE "@#$%?*+;:,.", 0
 asciiArray BYTE ".,:;+*?%$#@", 0
 
 .code
@@ -70,19 +70,17 @@ mov consoleColumnSize, eax
 ; 連續讀取畫面
 ; 呼叫 displayFrame 程序來讀取一個圖像 (Frame)
 ; 修改讀取的檔案路徑，來改變下次進入迴圈讀取的圖像
-; TODO: 設定幀數變數
-mov ecx, 2791
+mov ecx, totalFrames
 lp_frames:
     pushad
     call displayFrame
     popad
 
-    ; TODO: 可以寫成 PROC
     ; 利用迴圈數 (ECX) 轉成圖片編號，再轉成檔案路徑
     ; ESI 初始值為 7，移動到圖片路徑 (imagePath) 之編號位置
     ; totalFrames - ECX = 需要讀取的檔案編號
     mov esi, 7
-    mov eax, 2791
+    mov eax, totalFrames
     sub eax, ecx
 
     ; 透過 DIV 取商數和餘數，來解析各個位數
@@ -194,7 +192,6 @@ call ReadFromFile
 
 ; 計算圖片像素數量
 ; imageSize = imageWidth * imageHeight
-; TODO: 注意乘法範圍
 mov eax, imageWidth
 mov ebx, imageHeight
 mul ebx
