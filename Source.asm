@@ -13,16 +13,31 @@
 ; 圖片檔案名稱應該依照規定編號 0000.bmp ~ 9999.bmp
 ; 將所有檔案儲存在 ./frames 資料夾下
 ; 重要：圖片寬度應為 4 的倍數！
+;
+; 讀取背景音樂
+; 將背景音樂放置於 ./audios 資料夾下
+; 並命名為 bgm.wav
+; 重要：音樂應為 WAV 格式
 ; -----------------------------------------------------------------------------
 
 INCLUDE Irvine32.inc
-INCLUDE macros.inc
+INCLUDE Macros.inc
+INCLUDELIB Winmm.lib
+
+; PlaySound 函式結構
+PlaySound PROTO,
+    pszSound: PTR BYTE,
+    hmod: DWORD,
+    fdwSound: DWORD
 
 .data
 ; 讀取 Console 資訊相關變數
 consoleInfo CONSOLE_SCREEN_BUFFER_INFO <>
 consoleRowSize DWORD ?
 consoleColumnSize DWORD ?
+
+; 背景音效相關變數
+audioPath BYTE "audios/bgm.wav", 0
 
 ; 開檔相關變數
 imagePath BYTE "frames/0000.bmp", 0
@@ -65,6 +80,12 @@ movzx eax, consoleInfo.srWindow.Right
 movzx ebx, consoleInfo.srWindow.Left
 sub eax, ebx
 mov consoleColumnSize, eax
+
+; -----------------------------------------------------------------------------
+; 播放背景音效
+; 函式用法 PlaySound(檔案位置, NULL,模式)
+; 模式 SND_FILENAME | SND_ASYNC 代碼為 20001H
+INVOKE PlaySound, OFFSET audioPath, 0h, 20001h
 
 ; -----------------------------------------------------------------------------
 ; 連續讀取畫面
@@ -115,6 +136,9 @@ lp_frames:
 loop lp_frames
 
 quit::
+; -----------------------------------------------------------------------------
+; 停止背景音效
+INVOKE PlaySound, 0h, 0h, 0h
 exit
 main ENDP
 
