@@ -19,3 +19,5 @@
 
 Goal : 所以圖片長(這邊有-1)從 4 -> 8 (m=2)
 ![Linear transform pro](ascii_linear_multi.png)
+
+Test of Repository.
