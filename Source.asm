@@ -17,29 +17,34 @@
 ; 讀取背景音樂
 ; 將背景音樂放置於 ./audios 資料夾下
 ; 並命名為 bgm.wav
-; 重要：音樂應為 WAV 格式
+; 重要：音效應為 WAV 格式
 ; -----------------------------------------------------------------------------
 
 INCLUDE Irvine32.inc
 INCLUDE Macros.inc
 INCLUDELIB Winmm.lib
 
-; PlaySound 函式結構
+; PlaySound 函式定義
 PlaySound PROTO,
     pszSound: PTR BYTE,
     hmod: DWORD,
     fdwSound: DWORD
 
 .data
-; 讀取 Console 資訊相關變數
+; 讀取控制台資訊相關變數
 consoleInfo CONSOLE_SCREEN_BUFFER_INFO <>
+outputHandle HANDLE 0
 consoleRowSize DWORD ?
 consoleColumnSize DWORD ?
+
+; 控制台視窗大小參數
+; SMALL_RECT <左, 上, 右, 下>
+windowRect SMALL_RECT <0, 0, 128, 39>
 
 ; 背景音效相關變數
 audioPath BYTE "audios/bgm.wav", 0
 
-; 開檔相關變數
+; 圖片相關變數
 imagePath BYTE "frames/0000.bmp", 0
 fileHandle HANDLE ?
 fileType BYTE 2 DUP(?), 0
@@ -54,13 +59,13 @@ byteArray BYTE 20000 DUP(?), 0
 totalFrames DWORD 2791
 
 ; 字串常數
-fileError BYTE "ERROR: Failed to open the image!", 10, 0
+consoleTitle BYTE "VideoToAscii", 0
 asciiArray BYTE ".,:;+*?%$#@", 0
 
 .code
 main PROC
 ; -----------------------------------------------------------------------------
-; 取得 Console 顯示視窗長寬
+; 取得控制台顯示視窗長寬 (該部分功能最後沒有用上)
 ; 呼叫 GetConsoleScreenBufferInfo() 取得 consoleInfo
 ; consoleRowSize = consoleInfo.srWindow.Bottom - consoleInfo.srWindow.Top
 ; consoleColumnSize = consoleInfo.srWindow.Right - consoleInfo.srWindow.Left
@@ -68,7 +73,8 @@ main PROC
 
 INVOKE GetStdHandle, STD_OUTPUT_HANDLE
 ; EAX 已存入從上面指令取得之 StdHandle
-INVOKE GetConsoleScreenBufferInfo, eax, ADDR consoleInfo
+mov outputHandle, eax
+INVOKE GetConsoleScreenBufferInfo, outputHandle, ADDR consoleInfo
 
 movzx eax, consoleInfo.srWindow.Bottom
 movzx ebx, consoleInfo.srWindow.Top
@@ -80,6 +86,17 @@ movzx eax, consoleInfo.srWindow.Right
 movzx ebx, consoleInfo.srWindow.Left
 sub eax, ebx
 mov consoleColumnSize, eax
+
+; -----------------------------------------------------------------------------
+; 設定控制台標題
+INVOKE SetConsoleTitle, ADDR consoleTitle
+
+; -----------------------------------------------------------------------------
+; 設定控制台視窗大小
+INVOKE SetConsoleWindowInfo,
+    outputHandle,
+    TRUE,
+    ADDR windowRect
 
 ; -----------------------------------------------------------------------------
 ; 播放背景音效
@@ -152,13 +169,12 @@ mov edx, OFFSET imagePath
 call OpenInputFile
 ; 若無法成功開啟檔案，擲回 INVALID_HANDLE_VALUE 到 EAX
 cmp eax, INVALID_HANDLE_VALUE
-; 當條件不相等時跳轉 (jump - if - not- equal)
+; 當條件不相等時跳轉 (jump-if-not-equal)
 jne file_ok
 
 ; 顯示錯誤警告
 file_error:
-    mov edx, OFFSET fileError
-    call WriteString
+    mWrite <"ERROR: Failed to open the image!", 10, 0>
     jmp quit
 
 ; 成功開啟檔案
