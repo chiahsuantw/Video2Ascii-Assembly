@@ -62,6 +62,11 @@ totalFrames DWORD 2791
 consoleTitle BYTE "VideoToAscii", 0
 asciiArray BYTE ".,:;+*?%$#@", 0
 
+; 圖像比例調整相關
+grayArray BYTE 20000 DUP(?)
+newGrayArray BYTE 20000 DUP(0)
+newByteArray BYTE 30000 DUP(0), 0
+
 .code
 main PROC
 ; -----------------------------------------------------------------------------
@@ -110,6 +115,18 @@ INVOKE PlaySound, OFFSET audioPath, 0h, 20001h
 ; 修改讀取的檔案路徑，來改變下次進入迴圈讀取的圖像
 mov ecx, totalFrames
 lp_frames:
+    ; 變數空間歸零
+    push ecx
+    mov ecx, 30000
+    lp_reset:
+        push ecx
+        dec ecx
+        mov [newGrayArray + ecx], 0
+        pop ecx
+    loop lp_reset
+    pop ecx
+
+    ; 呼叫 displayFrame 顯示圖像
     pushad
     call displayFrame
     popad
@@ -296,25 +313,112 @@ lp_read_bytes:
     ; 結果儲存在 EAX
     mov ecx, 75
     div ecx
+    pop ecx
+    mov [grayArray + ecx], al
 
-    ; 轉換成字元並儲存
-    push esi
-    mov esi, eax
-    mov dl, [asciiArray + esi]
-    pop esi
+    ; 轉換成字元並儲存 (原圖)
+    mov dl, [asciiArray + eax]
     mov [byteArray + esi], dl
 
     dec esi
-    pop ecx
-loop lp_read_bytes
+    dec ecx
+    cmp ecx, 0
+jne lp_read_bytes
 
+; -----------------------------------------------------------------------------
+; 圖像比例調整
+; 使用線性插值法，將圖像寬度擴增成兩倍
+; 將原圖填入 newGrayArray (1~5120)
+mov ecx, imagesize
+lp_base:
+    push ecx    
+    mov eax, ecx
+    dec eax
+
+    mov ebx, imageWidth
+    mov edx, 0
+    div ebx
+    movzx eax, ax
+    push edx
+    push eax
+    mov edx, 0
+    mul ebx
+    mov edx, 0
+    mov ebx, 2
+    mul ebx
+    pop ebx
+    add eax, ebx
+    pop ebx
+    add eax, ebx
+    add eax, ebx
+    mov ebx, 0
+    mov bl, [grayArray + ecx]
+    mov [newGrayArray + eax], bl
+    mov dl, [newGrayArray + 10279]
+
+    mov dl, [asciiArray + ebx]
+    mov [newByteArray + eax], dl
+
+    pop ecx
+    dec ecx
+    cmp ecx, 0
+jne lp_base
+
+mov eax, imagesize
+mov edx, 0
+mov ebx, 2
+mul ebx
+add eax, imageHeight
+dec eax
+mov ecx, eax
+mov ebx, imagewidth
+add ebx, imagewidth
+inc ebx
+
+; 進行線性插值
+lp_insert: 
+    push ecx
+    push ebx
+    mov eax, ecx
+    push eax
+    mov edx, 0
+    div ebx
+    mov ebx, imageWidth
+    add ebx, imageWidth
+    cmp dx, bx
+    pop eax
+    jne n1
+        mov [newByteArray + ecx], 10
+        je con
+    n1:
+    mov al, [newByteArray + ecx]
+    cmp al, 0
+    jne con
+        mov eax, 0
+        inc ecx
+        add al, [newGrayArray + ecx]
+        dec ecx
+        dec ecx
+        add al, [newGrayArray + ecx]
+        inc ecx
+        mov ebx, 2
+        mov edx, 0
+        div ebx
+        mov bl, [asciiArray + eax]
+        mov [newByteArray + ecx], bl
+    con:
+    pop ebx
+    pop ecx
+loop lp_insert
+
+; -----------------------------------------------------------------------------
 ; 關閉檔案
 mov eax, fileHandle
 call CloseFile
 
 ; -----------------------------------------------------------------------------
 ; 輸出畫面
-mov edx, OFFSET byteArray
+mov edx, OFFSET newByteArray
 call WriteString
 
 ret
