@@ -18,6 +18,9 @@
 ; 將背景音樂放置於 ./audios 資料夾下
 ; 並命名為 bgm.wav
 ; 重要：音效應為 WAV 格式
+;
+; 可以選擇是否要開啟圖片比例調整功能
+; 設定 enableResize (預設為TRUE)
 ; -----------------------------------------------------------------------------
 
 INCLUDE Irvine32.inc
@@ -63,6 +66,7 @@ consoleTitle BYTE "VideoToAscii", 0
 asciiArray BYTE ".,:;+*?%$#@", 0
 
 ; 圖像比例調整相關
+enableResize BYTE 1
 grayArray BYTE 20000 DUP(?)
 newGrayArray BYTE 20000 DUP(0)
 newByteArray BYTE 30000 DUP(0), 0
@@ -326,6 +330,56 @@ lp_read_bytes:
 jne lp_read_bytes
 
 ; -----------------------------------------------------------------------------
+; 關閉檔案
+mov eax, fileHandle
+call CloseFile
+
+; 如果 enableResize == true 則跳過
+cmp enableResize, 1
+je display2xImage
+
+display1xImage:
+; -----------------------------------------------------------------------------
+; 左右鏡像翻轉
+; 對每列做 [ESI] 與 [EDI] 互換
+; ESI 起始值為 0
+mov esi, 0
+mov ecx, imageHeight
+lp_mirror:
+    push ecx
+    ; 每列 EDI 起始值為 ESI + imageWidth - 1
+    mov edi, esi
+    add edi, imageWidth
+    dec edi
+    ; 迴圈數設定 imageWidth / 2
+    mov edx, 0
+    mov eax, imageWidth
+    mov ecx, 2
+    div ecx
+    mov ecx, eax
+    push eax
+    lp_reverse:
+        mov al, [byteArray + esi]
+        mov bl, [byteArray + edi]
+        mov [byteArray + esi], bl
+        mov [byteArray + edi], al
+        inc esi
+        dec edi
+    loop lp_reverse
+    pop eax
+    add esi, eax
+    inc esi
+    pop ecx
+loop lp_mirror
+
+; -----------------------------------------------------------------------------
+; 輸出畫面
+mov edx, OFFSET byteArray
+call WriteString
+jmp finishProc
+
+display2xImage:
+; -----------------------------------------------------------------------------
 ; 圖像比例調整
 ; 使用線性插值法，將圖像寬度擴增成兩倍
 ; 將原圖填入 newGrayArray (1~5120)
@@ -412,15 +466,46 @@ lp_insert:
 loop lp_insert
 
 ; -----------------------------------------------------------------------------
-; 關閉檔案
-mov eax, fileHandle
-call CloseFile
+; 2X 左右鏡像翻轉
+; 對每列做 [ESI] 與 [EDI] 互換
+; ESI 起始值為 0
+mov esi, 0
+mov ecx, imageHeight
+lp_2x_mirror:
+    push ecx
+    ; 每列 EDI 起始值為 ESI + imageWidth - 1
+    mov edi, esi
+    add edi, imageWidth
+    add edi, imageWidth
+    dec edi
+    ; 迴圈數設定 imageWidth / 2
+    mov edx, 0
+    mov eax, imageWidth
+    add eax, imageWidth
+    mov ecx, 2
+    div ecx
+    mov ecx, eax
+    push eax
+    lp_2x_reverse:
+        mov al, [newByteArray + esi]
+        mov bl, [newByteArray + edi]
+        mov [newByteArray + esi], bl
+        mov [newByteArray + edi], al
+        inc esi
+        dec edi
+    loop lp_2x_reverse
+    pop eax
+    add esi, eax
+    inc esi
+    pop ecx
+loop lp_2x_mirror
 
 ; -----------------------------------------------------------------------------
 ; 輸出畫面
 mov edx, OFFSET newByteArray
 call WriteString
 
+finishProc:
 ret
 displayFrame ENDP
 
